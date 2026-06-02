@@ -49,6 +49,8 @@ MERIDIAN_FLOOR = -9000
 # key -> human label. Declaration order is the lane order in the frontend.
 REGIONS = [
     ("rome-byzantium", "Rome & Byzantium"),
+    ("italy", "Italy"),
+    ("germany", "Germany & the Holy Roman Empire"),
     ("europe-west", "Western Europe"),
     ("europe-east", "Eastern Europe & Russia"),
     ("middle-east", "Middle East & Persia"),
@@ -57,7 +59,8 @@ REGIONS = [
     ("southeast-asia", "Southeast Asia"),
     ("east-asia", "East Asia"),
     ("africa", "Africa"),
-    ("americas", "The Americas"),
+    ("north-america", "North America"),
+    ("south-america", "South America"),
 ]
 REGION_LABEL = dict(REGIONS)
 
@@ -70,7 +73,8 @@ ERAS = [
     ("antiquity", "Antiquity", 300),
     ("late-antiquity", "Late Antiquity", 750),
     ("middle-ages", "Middle Ages", 1450),
-    ("early-modern", "Early Modern", 9999),
+    ("early-modern", "Early Modern", 1800),
+    ("modern", "Modern", 9999),
 ]
 ERA_LABEL = {k: l for k, l, _ in ERAS}
 
@@ -699,13 +703,71 @@ def slugify(s):
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
 
 
+# Re-home a few curated rulers into the finer-grained regions added later
+# (Italy, Germany, North/South America) without disturbing the big ROSTER table.
+# Keyed by wikipedia title.
+REGION_OVERRIDE = {
+    # Holy Roman / Prussian / Habsburg -> Germany
+    "Otto I, Holy Roman Emperor": "germany",
+    "Frederick I, Holy Roman Emperor": "germany",
+    "Frederick II, Holy Roman Emperor": "germany",
+    "Maximilian I, Holy Roman Emperor": "germany",
+    "Charles V, Holy Roman Emperor": "germany",
+    "Maria Theresa": "germany",
+    "Frederick the Great": "germany",
+    # Mesoamerica -> North America
+    "K'inich Yax K'uk' Mo'": "north-america",
+    "K'inich Janaab' Pakal": "north-america",
+    "K'inich Kan Bahlam II": "north-america",
+    "Eight Deer Jaguar Claw": "north-america",
+    "Acamapichtli": "north-america",
+    "Itzcoatl": "north-america",
+    "Nezahualcoyotl": "north-america",
+    "Moctezuma I": "north-america",
+    "Ahuitzotl": "north-america",
+    "Moctezuma II": "north-america",
+    "Cuauhtémoc": "north-america",
+    # Andes -> South America
+    "Pachacuti": "south-america",
+    "Topa Inca Yupanqui": "south-america",
+    "Huayna Capac": "south-america",
+    "Atahualpa": "south-america",
+}
+
+# A few hand-curated anchors for the new Italy / Germany lanes, so the
+# recognisable names are guaranteed present before the Wikidata top-up.
+EXTRA_CURATED = [
+    # (name, wp, realm, reign_from, reign_to, blurb, region)
+    ("Theodoric the Great", "Theodoric the Great", "Ostrogothic Kingdom", 493, 526,
+     "Ostrogothic king who ruled Italy from Ravenna", "italy"),
+    ("Roger II of Sicily", "Roger II of Sicily", "Kingdom of Sicily", 1130, 1154,
+     "forged a brilliant Norman-Arab-Byzantine kingdom in the south", "italy"),
+    ("Cosimo de' Medici", "Cosimo de' Medici", "Republic of Florence", 1434, 1464,
+     "banker who ruled Renaissance Florence from behind the scenes", "italy"),
+    ("Lorenzo de' Medici", "Lorenzo de' Medici", "Republic of Florence", 1469, 1492,
+     "'the Magnificent', patron of the Florentine Renaissance", "italy"),
+    ("Cosimo I de' Medici", "Cosimo I de' Medici", "Grand Duchy of Tuscany", 1537, 1574,
+     "first Grand Duke of Tuscany", "italy"),
+    ("Victor Emmanuel II", "Victor Emmanuel II of Italy", "Kingdom of Italy", 1861, 1878,
+     "first king of a united Italy", "italy"),
+    ("Victor Emmanuel III", "Victor Emmanuel III", "Kingdom of Italy", 1900, 1946,
+     "reigned through two world wars and the rise of Fascism", "italy"),
+    ("Henry IV", "Henry IV, Holy Roman Emperor", "Holy Roman Empire", 1084, 1105,
+     "knelt at Canossa in the Investiture Controversy", "germany"),
+    ("Wilhelm I", "Wilhelm I, German Emperor", "German Empire", 1871, 1888,
+     "first emperor of a united Germany", "germany"),
+    ("Wilhelm II", "Wilhelm II, German Emperor", "German Empire", 1888, 1918,
+     "last German Kaiser; reigned into the First World War", "germany"),
+]
+
+
 def make_record(name, wp, realm, rf, rt, blurb, region_key, **extra):
     """One pre-slug roster record (the shape both the curated table and the
     Wikidata augmenter produce)."""
     rec = {
         "name": name,
         "region": region_key,
-        "region_label": REGION_LABEL[region_key],
+        "region_label": REGION_LABEL.get(region_key, region_key),
         "realm": realm,
         "reign_from": rf,
         "reign_to": rt,
@@ -719,12 +781,17 @@ def make_record(name, wp, realm, rf, rt, blurb, region_key, **extra):
 
 
 def curated_records():
-    """The hand-curated spine, as pre-slug records."""
+    """The hand-curated spine, as pre-slug records — every ROSTER region plus the
+    EXTRA_CURATED anchors, with REGION_OVERRIDE re-homing a few into finer lanes."""
     records = []
-    for region_key, _label in REGIONS:
-        for (name, wp, realm, rf, rt, blurb) in ROSTER.get(region_key, []):
-            records.append(make_record(name, wp, realm, rf, rt, blurb, region_key,
+    for region_key, entries in ROSTER.items():
+        for (name, wp, realm, rf, rt, blurb) in entries:
+            region = REGION_OVERRIDE.get(wp, region_key)
+            records.append(make_record(name, wp, realm, rf, rt, blurb, region,
                                        source="curated"))
+    for (name, wp, realm, rf, rt, blurb, region) in EXTRA_CURATED:
+        records.append(make_record(name, wp, realm, rf, rt, blurb, region,
+                                   source="curated"))
     return records
 
 

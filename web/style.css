@@ -37,6 +37,7 @@
   --era-late-antiquity: oklch(0.82 0.045 145);
   --era-middle-ages: oklch(0.82 0.040 250);
   --era-early-modern: oklch(0.84 0.050 350);
+  --era-modern: oklch(0.80 0.058 20);
 
   --recess: inset 0 1px 2px oklch(0.30 0.03 62 / 0.18);
   --incise: 0 1px 0 oklch(1 0 0 / 0.5);
@@ -67,6 +68,7 @@
   --era-late-antiquity: oklch(0.38 0.045 145);
   --era-middle-ages: oklch(0.38 0.045 250);
   --era-early-modern: oklch(0.40 0.050 350);
+  --era-modern: oklch(0.42 0.058 20);
   --recess: inset 0 1px 2px oklch(0 0 0 / 0.4);
   --incise: 0 1px 0 oklch(1 1 1 / 0.04);
   --raise: 0 4px 18px oklch(0 0 0 / 0.45);
@@ -75,6 +77,10 @@
 /* region inks — assigned by [data-region]; used for the lane rule, the glyph,
    and the medallion ring. Low chroma so they read as ink, not neon. */
 [data-region="rome-byzantium"]  { --rc: oklch(0.52 0.115 350); }
+[data-region="italy"]           { --rc: oklch(0.52 0.130 28); }
+[data-region="germany"]         { --rc: oklch(0.46 0.045 90); }
+[data-region="north-america"]   { --rc: oklch(0.50 0.115 255); }
+[data-region="south-america"]   { --rc: oklch(0.54 0.115 138); }
 [data-region="europe-west"]     { --rc: oklch(0.50 0.110 268); }
 [data-region="europe-east"]     { --rc: oklch(0.50 0.095 150); }
 [data-region="middle-east"]     { --rc: oklch(0.52 0.095 200); }
@@ -153,6 +159,7 @@ button { font-family: inherit; }
 .rule-band[data-era="late-antiquity"] { background: var(--era-late-antiquity); }
 .rule-band[data-era="middle-ages"] { background: var(--era-middle-ages); }
 .rule-band[data-era="early-modern"] { background: var(--era-early-modern); }
+.rule-band[data-era="modern"] { background: var(--era-modern); }
 .rule-band + .rule-band { border-left: 1px solid oklch(from var(--ink) l c h / 0.22); }
 .rule-band-label { position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
   font-family: var(--caps); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
@@ -181,6 +188,7 @@ button { font-family: inherit; }
 .era-legend i[data-era="late-antiquity"] { background: var(--era-late-antiquity); }
 .era-legend i[data-era="middle-ages"] { background: var(--era-middle-ages); }
 .era-legend i[data-era="early-modern"] { background: var(--era-early-modern); }
+.era-legend i[data-era="modern"] { background: var(--era-modern); }
 
 .meridian-controls { display: flex; align-items: center; gap: var(--sp-xs); }
 .step-btn { width: 34px; height: 34px; border: 1px solid var(--line-2); background: var(--paper-2); color: var(--ink-soft);

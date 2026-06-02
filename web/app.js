@@ -164,7 +164,7 @@ function buildMeridian() {
   // ticks at canonical years within the span
   const ticks = document.getElementById("rule-ticks");
   ticks.innerHTML = "";
-  const marks = [-8000, -6000, -4000, -3000, -2000, -1000, 1, 500, 1000, 1400, 1700];
+  const marks = [-8000, -5000, -3000, -2000, -1000, 1, 500, 1000, 1400, 1700, 1900, 2000];
   marks.filter((m) => m >= state.bounds.min_year && m <= state.bounds.max_year).forEach((m) => {
     const t = el("div", "rule-tick");
     t.style.left = (yearToPos(m) * 100) + "%";
@@ -291,12 +291,20 @@ function renderSynchronic() {
   const root = document.getElementById("lanes");
   root.className = "lanes";
   root.innerHTML = "";
+  let silent = 0;
   state.regions.forEach((region) => {
     const live = state.rulers
       .filter((r) => r.region === region.key && reigning(r, state.year))
       .sort((a, b) => (a.display_from || 0) - (b.display_from || 0));
-    root.appendChild(laneEl(region, live, "no throne charted here this year"));
+    // With many lanes, show only the regions with a throne this year.
+    if (live.length) root.appendChild(laneEl(region, live, ""));
+    else silent++;
   });
+  if (silent && root.children.length) {
+    const note = el("p", "atlas-note",
+      `${silent} of ${state.regions.length} regions hold no throne in this atlas at ${fmtYear(state.year)}.`);
+    root.appendChild(note);
+  }
   root.appendChild(handoffEl());
 }
 

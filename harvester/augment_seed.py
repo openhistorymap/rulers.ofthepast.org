@@ -31,17 +31,28 @@ from . import wikipedia as wp
 # Per-region targets for the *total* roster (curated + augmented). The augmenter
 # tops each region up to its target with the best-known Wikidata rulers.
 TARGETS = {
-    "rome-byzantium": 55,
-    "europe-west": 120,
-    "europe-east": 70,
-    "middle-east": 85,
-    "steppe": 28,
-    "south-asia": 62,
-    "southeast-asia": 38,
-    "east-asia": 92,
-    "africa": 58,
-    "americas": 26,
+    "rome-byzantium": 52,
+    "italy": 50,
+    "germany": 68,
+    "europe-west": 80,
+    "europe-east": 64,
+    "middle-east": 80,
+    "steppe": 26,
+    "south-asia": 60,
+    "southeast-asia": 36,
+    "east-asia": 90,
+    "africa": 56,
+    "north-america": 66,
+    "south-america": 64,
 }
+
+# American republics — the head-of-state (president) query runs over these so the
+# Americas reach the present, not just the pre-Columbian past.
+AMERICAN_COUNTRIES = [
+    "Q30", "Q96", "Q155", "Q414", "Q739", "Q717", "Q419", "Q298", "Q750",
+    "Q736", "Q733", "Q77", "Q241", "Q790", "Q786", "Q774", "Q783", "Q811",
+    "Q800", "Q804", "Q792",
+]
 
 # Century-ish slices over the named-ruler range. Kept small where history is
 # dense (medieval / early-modern Europe) so each WDQS query stays well under the
@@ -50,15 +61,17 @@ SLICES = [
     (-3300, -500), (-500, 1), (1, 400), (400, 700), (700, 1000),
     (1000, 1200), (1200, 1350), (1350, 1500),
     (1500, 1600), (1600, 1700), (1700, 1801),
+    (1801, 1900), (1900, 2030),
 ]
 
 MAX_REIGN = 80          # drop mythically long "reigns" (data errors / legends)
+MAX_START = 2030        # the timeline reaches the present
 
 # Position / title words that are not the sovereigns this atlas is about.
 EXCLUDE_WORDS = (
     "bishop", "archbishop", "patriarch", "pope", "cardinal", "abbot", "abbess",
     "consort", "titular", "pretender", "antipope", "claimant", "co-prince",
-    "viceroy", "governor", "president", "prime minister", "chancellor",
+    "viceroy", "governor", "prime minister", "chancellor",
     "nagid", "exilarch", "rabbi", "high priest", "prophet", "saint",
     "deity", "god ", "goddess", "mytholog",
 )
@@ -66,26 +79,33 @@ EXCLUDE_WORDS = (
 # Region keyword rules — ordered; first substring found in a label wins. Tuned so
 # "Holy Roman" beats "Roman", and historical state names route correctly.
 REGION_RULES = [
-    # rome-byzantium (the Greco-Roman Mediterranean)
-    ("rome-byzantium", ["holy roman"]),   # sentinel: handled below as europe-west
+    # rome-byzantium (the Greco-Roman Mediterranean). "holy roman" is special-
+    # cased to germany in classify() before any of these run.
     ("rome-byzantium", ["byzan", "eastern roman", "western roman", "roman empire",
                         "roman emperor", "roman republic", "latin empire", "nicaea",
                         "trebizond", "thessalonica", "macedon", "epirus", "achaea",
-                        "syracuse", "magna graecia", "hellenistic greece"]),
-    ("europe-west", ["holy roman", "france", "french", "england", "english", "britain",
+                        "syracuse", "magna graecia", "hellenistic greece", "greece",
+                        "greek", "athens", "sparta"]),
+    ("italy", ["italy", "italian", "lombard", "ostrogoth", "naples", "neapolitan",
+               "two sicilies", "sicily", "sardinia", "savoy", "piedmont", "milan",
+               "milanese", "florence", "florentine", "tuscany", "venice", "venetian",
+               "genoa", "genoese", "papal", "vatican", "modena", "parma", "mantua",
+               "ferrara", "montferrat", "salerno", "amalfi", "romagna", "urbino"]),
+    ("germany", ["holy roman", "germany", "german", "prussia", "prussian",
+                 "brandenburg", "bavaria", "bavarian", "saxony", "saxon", "swabia",
+                 "franconia", "palatinate", "württemberg", "wurttemberg", "hanover",
+                 "hesse", "baden", "austria", "austrian", "habsburg", "styria",
+                 "tyrol", "salzburg", "cologne", "mainz", "trier", "westphalia",
+                 "mecklenburg", "holstein", "oldenburg", "nassau", "frisia"]),
+    ("europe-west", ["france", "french", "england", "english", "britain", "british",
                      "scotland", "scottish", "wales", "welsh", "ireland", "irish",
                      "spain", "spanish", "castile", "aragon", "leon", "navarre",
-                     "asturias", "galicia", "portugal", "portuguese", "germany",
-                     "german", "prussia", "bavaria", "saxony", "swabia", "franconia",
-                     "brandenburg", "palatinate", "württemberg", "hanover", "austria",
-                     "habsburg", "italy", "italian", "sicily", "naples", "sardinia",
-                     "savoy", "milan", "florence", "tuscany", "venice", "genoa",
-                     "papal", "vatican", "lombard", "ostrogoth", "visigoth",
-                     "frankish", "franks", "burgundy", "lorraine", "brittany",
-                     "normandy", "aquitaine", "netherlands", "holland", "flanders",
-                     "brabant", "luxembourg", "belgium", "denmark", "danish",
-                     "norway", "norwegian", "sweden", "swedish", "iceland",
-                     "switzerland", "swiss", "frisia", "andorra", "monaco", "malta"]),
+                     "asturias", "galicia", "portugal", "portuguese", "netherlands",
+                     "holland", "dutch", "flanders", "brabant", "luxembourg",
+                     "belgium", "denmark", "danish", "norway", "norwegian", "sweden",
+                     "swedish", "iceland", "switzerland", "swiss", "andorra",
+                     "monaco", "malta", "burgundy", "lorraine", "brittany",
+                     "normandy", "aquitaine", "frankish", "franks", "visigoth"]),
     ("europe-east", ["russia", "russian", "muscovy", "muscovite", "kievan", "kyiv",
                      "kiev", "rus'", "rus ", " rus", "novgorod", "vladimir-suzdal",
                      "poland", "polish", "lithuania", "lithuanian", "hungary",
@@ -144,12 +164,21 @@ REGION_RULES = [
                 "oyo", "hausa", "zazzau", "kano", "mamluk", "fatimid egypt",
                 "libya", "algeria", "sudan", "somalia", "swahili", "kilwa",
                 "madagascar", "merina", "buganda", "rwanda", "africa"]),
-    ("americas", ["aztec", "maya", "mayan", "inca", "mexico", "mexica", "tenochtitlan",
-                  "texcoco", "tlacopan", "mixtec", "zapotec", "toltec", "olmec",
-                  "peru", "cusco", "cuzco", "andes", "palenque", "copán", "copan",
-                  "tikal", "calakmul", "purépecha", "purepecha", "tarascan",
-                  "muisca", "chimor", "chimú", "quiché", "yucatan", "yucatán",
-                  "guatemala", "honduras"]),
+    ("north-america", ["united states", "u.s.", "mexico", "mexican", "mexica",
+                       "aztec", "maya", "mayan", "toltec", "mixtec", "zapotec",
+                       "olmec", "tenochtitlan", "texcoco", "tlacopan", "new spain",
+                       "palenque", "copán", "copan", "tikal", "calakmul", "yucatan",
+                       "yucatán", "purépecha", "purepecha", "tarascan", "guatemala",
+                       "honduras", "el salvador", "nicaragua", "costa rica", "panama",
+                       "cuba", "cuban", "haiti", "haitian", "dominican", "jamaica",
+                       "canada", "canadian", "quiché"]),
+    ("south-america", ["brazil", "brazilian", "argentina", "argentine", "colombia",
+                       "colombian", "gran colombia", "new granada", "venezuela",
+                       "venezuelan", "peru", "peruvian", "chile", "chilean", "bolivia",
+                       "bolivian", "ecuador", "ecuadorian", "paraguay", "uruguay",
+                       "guyana", "suriname", "inca", "cusco", "cuzco", "andes",
+                       "chimor", "chimú", "muisca", "patagonia", "la plata",
+                       "río de la plata", "quito", "charcas"]),
 ]
 
 
@@ -169,12 +198,10 @@ def classify(label):
     if not label:
         return None
     s = label.lower()
-    # "holy roman" must route to europe-west even though it contains "roman"
+    # "holy roman" must route to Germany even though it contains "roman"
     if "holy roman" in s:
-        return "europe-west"
+        return "germany"
     for region, words in REGION_RULES:
-        if region == "rome-byzantium" and words == ["holy roman"]:
-            continue
         for w in words:
             if w in s:
                 return region
@@ -206,39 +233,66 @@ def _qid(uri):
     return uri.rsplit("/", 1)[-1] if uri else None
 
 
+PRES_QUERY = """
+SELECT DISTINCT ?person ?title ?start ?end ?img ?pos ?p17 ?p27 ?sl WHERE {
+  VALUES ?p17 { %s }
+  ?pos wdt:P17 ?p17 ; wdt:P279* wd:Q48352 .
+  ?person wdt:P31 wd:Q5 ; p:P39 ?st .
+  ?st ps:P39 ?pos ; pq:P580 ?start .
+  OPTIONAL { ?st pq:P582 ?end }
+  ?article schema:about ?person ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?title .
+  OPTIONAL { ?person wdt:P18 ?img }
+  OPTIONAL { ?person wdt:P27 ?p27 }
+  OPTIONAL { ?person wikibase:sitelinks ?sl }
+  FILTER(YEAR(?start) >= 1750)
+}
+"""
+
+
+def _merge(people, rows):
+    for r in rows:
+        pid = _qid(r["person"]["value"])
+        p = people.get(pid)
+        if not p:
+            p = people[pid] = {
+                "qid": pid, "title": r["title"]["value"],
+                "starts": [], "ends": [], "img": None, "sl": 0,
+                "pos": set(), "p17": set(), "p27": set(),
+            }
+        sy = _yr(r.get("start", {}).get("value"))
+        ey = _yr(r.get("end", {}).get("value"))
+        if sy is not None:
+            p["starts"].append(sy)
+        if ey is not None:
+            p["ends"].append(ey)
+        if r.get("img"):
+            p["img"] = r["img"]["value"]
+        if r.get("sl"):
+            try:
+                p["sl"] = max(p["sl"], int(r["sl"]["value"]))
+            except ValueError:
+                pass
+        for k in ("pos", "p17", "p27"):
+            if r.get(k):
+                p[k].add(_qid(r[k]["value"]))
+
+
 def fetch_candidates():
-    """Run the sliced WDQS queries and aggregate one record per person."""
+    """Run the sliced monarch queries + the American head-of-state (president)
+    query, aggregating one record per person."""
     people = {}
     for (a, b) in SLICES:
         res = wd.query(SLICE_QUERY % (a, b))
         rows = res["results"]["bindings"]
         print(f"  slice [{a}..{b}): {len(rows)} rows", flush=True)
-        for r in rows:
-            pid = _qid(r["person"]["value"])
-            p = people.get(pid)
-            if not p:
-                p = people[pid] = {
-                    "qid": pid, "title": r["title"]["value"],
-                    "starts": [], "ends": [], "img": None, "sl": 0,
-                    "pos": set(), "p17": set(), "p27": set(),
-                }
-            sy = _yr(r.get("start", {}).get("value"))
-            ey = _yr(r.get("end", {}).get("value"))
-            if sy is not None:
-                p["starts"].append(sy)
-            if ey is not None:
-                p["ends"].append(ey)
-            if r.get("img"):
-                p["img"] = r["img"]["value"]
-            if r.get("sl"):
-                try:
-                    p["sl"] = max(p["sl"], int(r["sl"]["value"]))
-                except ValueError:
-                    pass
-            for k, col in (("pos", "pos"), ("p17", "p17"), ("p27", "p27")):
-                if r.get(col):
-                    p[k].add(_qid(r[col]["value"]))
+        _merge(people, rows)
         time.sleep(2)
+    # American presidents / heads of state (republics — no monarch positions)
+    values = " ".join("wd:" + q for q in AMERICAN_COUNTRIES)
+    res = wd.query(PRES_QUERY % values)
+    rows = res["results"]["bindings"]
+    print(f"  presidents (Americas): {len(rows)} rows", flush=True)
+    _merge(people, rows)
     return people
 
 
@@ -274,7 +328,7 @@ def main():
         rt = max(p["ends"]) if p["ends"] else max(p["starts"])
         if rt < rf:
             rf, rt = rt, rf
-        if rf < bs.MERIDIAN_FLOOR or rf > 1800:
+        if rf < bs.MERIDIAN_FLOOR or rf > MAX_START:
             continue
         if (rt - rf) > MAX_REIGN:
             continue
