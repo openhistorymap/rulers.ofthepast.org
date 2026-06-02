@@ -15,12 +15,15 @@ the "before this atlas — Rome" card.
 
 ## Scope (decided up front)
 
-- **The roster is a hybrid of ~634 rulers.** A hand-curated core of ~255 of the
-  most recognisable monarchs (`harvester/build_seed.py`), topped up per region
-  from Wikidata (`harvester/augment_seed.py`) to a balanced ~634. Ten regions
-  (the lanes), six eras — including the deliberately-empty **"Before the Kings"**
-  deep-time band: the meridian reaches to 9000 BC, but named rulers begin only
-  with Narmer (~3100 BC), because kingship is younger than writing.
+- **The roster is a hybrid of ~789 rulers.** A hand-curated core of ~265 of the
+  most recognisable rulers (`harvester/build_seed.py`), topped up per region from
+  Wikidata (`harvester/augment_seed.py`) to a balanced ~789. **Thirteen regions**
+  (the lanes — Italy and Germany are their own lanes; the Americas split into
+  North and South), **seven eras** spanning the deliberately-empty **"Before the
+  Kings"** deep-time band (the meridian reaches to 9000 BC, but named rulers begin
+  with Narmer ~3100 BC) through to a **Modern** era reaching the present
+  (~2026) — including monarchs *and* American presidents (a Wikidata
+  head-of-state query over 21 republics).
 - **Reign spans, curated in the seed, are authoritative for placement.** The
   whole site turns on "who reigned in year Y", so a stray Wikidata office-date
   must never misplace a known king. The harvester fills reign only where the
