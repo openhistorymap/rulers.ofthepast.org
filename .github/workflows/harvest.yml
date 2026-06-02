@@ -1,0 +1,71 @@
+name: Harvest
+
+# Refreshes `data/` from Wikidata + Wikipedia and commits the result back to
+# `main`. Does NOT publish to Pages — run the Deploy workflow separately once
+# you're happy with the refreshed data. The roster spine (the curated world
+# roster, vendored as harvester/data/seed.json and built by build_seed.py) is
+# fixed; this only re-pulls the enrichment (reign spans, portraits, biographies)
+# which upstream may improve.
+#
+# Manual-only — the roster is a curated set, so no cron. To change *who* is on
+# the roster, edit harvester/build_seed.py, re-run it, and commit seed.json.
+
+on:
+  workflow_dispatch:
+    inputs:
+      disable:
+        description: "Comma-separated enricher blacklist (e.g. wikipedia). Blank disables nothing."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: otp-harvest
+  cancel-in-progress: false
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: harvester/requirements.txt
+
+      - name: Install harvester deps
+        run: pip install -r harvester/requirements.txt
+
+      - name: Run harvester
+        env:
+          OTP_DISABLE: ${{ github.event.inputs.disable }}
+        run: python -m harvester
+
+      - name: Commit data changes
+        run: |
+          git config user.name "otp-bot"
+          git config user.email "otp-bot@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "no data changes."
+          else
+            git commit -m "data: refresh $(date -u +%Y-%m-%d) (manual harvest)"
+            git push
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Harvest summary" >> $GITHUB_STEP_SUMMARY
+          if [ -f data/manifest.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            python -c "import json;m=json.load(open('data/manifest.json'));print(json.dumps({'generated_at':m.get('generated_at'),'totals':m.get('totals'),'bounds':m.get('bounds'),'sources':m.get('sources')},indent=2))" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Run the **Deploy** workflow when ready to publish." >> $GITHUB_STEP_SUMMARY

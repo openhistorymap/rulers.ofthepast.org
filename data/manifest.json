@@ -1,0 +1,124 @@
+{
+  "generated_at": "2026-06-02T11:37:52+00:00",
+  "title": "Rulers of the Past",
+  "tagline": "Who ruled the world at the same time — antiquity to the eighteenth century",
+  "totals": {
+    "rulers": 124,
+    "with_image": 121,
+    "with_extract": 124,
+    "chat_ready": 115,
+    "regions": 10
+  },
+  "regions": [
+    {
+      "key": "rome-byzantium",
+      "label": "Rome & Byzantium",
+      "count": 14
+    },
+    {
+      "key": "europe-west",
+      "label": "Western Europe",
+      "count": 20
+    },
+    {
+      "key": "europe-east",
+      "label": "Eastern Europe & Russia",
+      "count": 10
+    },
+    {
+      "key": "middle-east",
+      "label": "Middle East & Persia",
+      "count": 15
+    },
+    {
+      "key": "steppe",
+      "label": "Steppe & Central Asia",
+      "count": 5
+    },
+    {
+      "key": "south-asia",
+      "label": "South Asia",
+      "count": 15
+    },
+    {
+      "key": "southeast-asia",
+      "label": "Southeast Asia",
+      "count": 6
+    },
+    {
+      "key": "east-asia",
+      "label": "East Asia",
+      "count": 21
+    },
+    {
+      "key": "africa",
+      "label": "Africa",
+      "count": 11
+    },
+    {
+      "key": "americas",
+      "label": "The Americas",
+      "count": 7
+    }
+  ],
+  "eras": [
+    {
+      "key": "antiquity",
+      "label": "Antiquity",
+      "from": null,
+      "to": 300,
+      "count": 21
+    },
+    {
+      "key": "late-antiquity",
+      "label": "Late Antiquity",
+      "from": 300,
+      "to": 750,
+      "count": 18
+    },
+    {
+      "key": "middle-ages",
+      "label": "Middle Ages",
+      "from": 750,
+      "to": 1450,
+      "count": 42
+    },
+    {
+      "key": "early-modern",
+      "label": "Early Modern",
+      "from": 1450,
+      "to": null,
+      "count": 43
+    }
+  ],
+  "bounds": {
+    "min_year": -1479,
+    "max_year": 1796
+  },
+  "handoff": {
+    "year": 476,
+    "site": "rulers.ofancientrome.org",
+    "url": "https://rulers.ofancientrome.org",
+    "label": "the Rulers of Ancient Rome",
+    "note": "The thrones of the world reach back past the edge of this atlas. For the unbroken line of Rome — every king, consul, and emperor down to the fall of the West in 476 — cross to the sibling gallery."
+  },
+  "sources": {
+    "wikidata": {
+      "status": "ok",
+      "matched": 124,
+      "total": 124,
+      "no_match": [],
+      "non_human": [],
+      "referenced_labels": 1663,
+      "elapsed_seconds": 91.5
+    },
+    "wikipedia": {
+      "status": "ok",
+      "extracts": 124,
+      "total": 124,
+      "chat_ready": 115,
+      "no_match": [],
+      "elapsed_seconds": 10.2
+    }
+  }
+}

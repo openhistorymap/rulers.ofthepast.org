@@ -1,0 +1,5 @@
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.6
+# Uncomment when wiring the model (see app/main.py : _answer):
+# anthropic>=0.40

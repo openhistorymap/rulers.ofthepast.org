@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Rulers of the Past — who ruled the world at the same time</title>
+  <meta name="description" content="A synchronic atlas of world rulers, from antiquity to the eighteenth century. Move the meridian to any year and see who held power across the world at the same moment — and speak with an avatar of those whose lives are best recorded. Built on Wikipedia and Wikidata." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Cormorant+SC:wght@500;600;700&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+
+  <script>
+    // Set theme before paint to avoid a flash.
+    (function () {
+      try {
+        var saved = localStorage.getItem("otp-theme");
+        if (saved === "dark" || saved === "light") {
+          document.documentElement.setAttribute("data-theme", saved);
+        } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href=".">
+      <svg class="brand-mark" viewBox="0 0 36 36" aria-hidden="true">
+        <!-- an armillary sphere: the same sky over every throne -->
+        <circle class="bm-ring" cx="18" cy="18" r="14" />
+        <ellipse class="bm-ring" cx="18" cy="18" rx="14" ry="5.5" />
+        <ellipse class="bm-ring" cx="18" cy="18" rx="5.5" ry="14" />
+        <line class="bm-axis" x1="18" y1="1.5" x2="18" y2="34.5" />
+        <circle class="bm-star" cx="18" cy="18" r="2.1" />
+      </svg>
+      <span class="brand-text">Rulers<b>&middot;</b>of<b>&middot;</b>the<b>&middot;</b>Past</span>
+    </a>
+
+    <div class="topbar-right">
+      <label class="search" aria-label="Search rulers">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+        <input type="search" id="search" placeholder="Find a ruler…" autocomplete="off" spellcheck="false" />
+      </label>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle day or night">
+        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><g stroke-linecap="round"><line x1="12" y1="2.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21.5" y2="12"/><line x1="5.2" y1="5.2" x2="7" y2="7"/><line x1="17" y1="17" x2="18.8" y2="18.8"/><line x1="5.2" y1="18.8" x2="7" y2="17"/><line x1="17" y1="7" x2="18.8" y2="5.2"/></g></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5 A8.5 8.5 0 0 1 9.5 4 A8.5 8.5 0 1 0 20 14.5 Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- The Meridian: a movable line of "now" sweeping across all the world's thrones -->
+  <section class="meridian" id="meridian" aria-label="The meridian of time">
+    <div class="meridian-head">
+      <div class="year-block">
+        <span class="year-label" id="year-label">in the year</span>
+        <span class="year-value" id="year-value">—</span>
+      </div>
+      <p class="reading" id="reading">Loading the thrones of the world…</p>
+    </div>
+
+    <div class="rule" id="rule" role="slider" tabindex="0" aria-label="Year" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
+      <div class="rule-bands" id="rule-bands"></div>
+      <div class="rule-ticks" id="rule-ticks"></div>
+      <div class="rule-handle" id="rule-handle"><span class="handle-flag" id="handle-flag">—</span></div>
+    </div>
+
+    <div class="meridian-foot">
+      <div class="era-legend" id="era-legend"></div>
+      <div class="meridian-controls">
+        <button class="step-btn" id="step-back" type="button" aria-label="Earlier">&minus;</button>
+        <button class="sweep-btn" id="sweep" type="button" aria-pressed="false">
+          <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5 L19 12 L7 19 Z"/></svg>
+          <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
+          <span>let time drift</span>
+        </button>
+        <button class="step-btn" id="step-fwd" type="button" aria-label="Later">+</button>
+        <button class="mode-btn" id="mode-toggle" type="button">see the whole atlas</button>
+      </div>
+    </div>
+  </section>
+
+  <main class="stage" id="stage">
+    <div class="lanes" id="lanes" aria-live="polite"></div>
+  </main>
+
+  <!-- Detail folio -->
+  <section class="detail" id="detail" aria-hidden="true" role="dialog" aria-modal="false" aria-label="Ruler detail">
+    <button class="detail-close" id="detail-close" aria-label="Close">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13"/></svg>
+    </button>
+    <div class="detail-body" id="detail-body"></div>
+  </section>
+  <div class="scrim" id="scrim" hidden></div>
+
+  <footer class="footer">
+    <span>Made with <span class="heart">&lt;3</span> in Bologna by <a href="http://www.openhistorymap.org" target="_blank" rel="noopener">OpenHistoryMap</a></span>
+    <span class="footer-sep">·</span>
+    <a id="handoff-link" href="https://rulers.ofancientrome.org" target="_blank" rel="noopener">← the Rulers of Ancient Rome</a>
+    <span class="footer-sep">·</span>
+    <span>text &amp; portraits © <a href="https://www.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a> / <a href="https://commons.wikimedia.org" target="_blank" rel="noopener">Wikimedia</a> · facts <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a></span>
+    <span class="footer-sep">·</span>
+    <a href="https://github.com/openhistorymap/rulers.ofthepast.org" target="_blank" rel="noopener">source</a>
+  </footer>
+
+  <script src="chat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
