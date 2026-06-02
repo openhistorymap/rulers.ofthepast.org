@@ -111,6 +111,28 @@ function posToYear(p) {
   }
   return state.bounds.max_year;
 }
+function eraOfYear(y) {
+  for (const s of state.segments) {
+    if (y < s.hi || s === state.segments[state.segments.length - 1]) return s;
+  }
+  return state.segments[state.segments.length - 1];
+}
+function parseYear(str) {
+  const s = (str || "").trim().toLowerCase();
+  if (!s) return null;
+  const bc = /\bb\.?c\.?(e)?\b/.test(s);
+  const y = parseInt(s.replace(/a\.?d\.?|c\.?e\.?|b\.?c\.?(e)?/g, "").replace(/[^0-9-]/g, ""), 10);
+  if (isNaN(y)) return null;
+  return bc ? -Math.abs(y) : y;
+}
+// short region labels for the register strip
+const REGION_SHORT = {
+  "rome-byzantium": "Rome & Byz.", "italy": "Italy", "germany": "Germany",
+  "europe-west": "W. Europe", "europe-east": "E. Europe", "middle-east": "Mid. East",
+  "steppe": "Steppe", "south-asia": "S. Asia", "southeast-asia": "SE Asia",
+  "east-asia": "E. Asia", "africa": "Africa", "north-america": "N. America",
+  "south-america": "S. America",
+};
 
 /* ---------- boot ---------- */
 async function boot() {
@@ -133,6 +155,7 @@ async function boot() {
   // a year that opens on a rich moment of simultaneity
   state.year = Math.max(state.bounds.min_year, Math.min(state.bounds.max_year, 800));
   buildMeridian();
+  buildRegister();
   wireChrome();
   const hash = location.hash.replace(/^#/, "");
   setYear(state.year);
@@ -145,19 +168,25 @@ function buildMeridian() {
   const legend = document.getElementById("era-legend");
   bands.innerHTML = "";
   legend.innerHTML = "";
+  const eraCount = {};
+  (state.manifest.eras || []).forEach((e) => (eraCount[e.key] = e.count || 0));
   state.segments.forEach((s) => {
     const b = el("div", "rule-band");
     b.dataset.era = s.key;
     b.style.flex = `${s.w} 0 0`;
-    if (s.w > 0.1) b.appendChild(el("span", "rule-band-label", s.label));
+    b.title = `${s.label} · ${fmtYear(s.lo)} – ${fmtYear(s.hi)}`;
+    if (s.w > 0.08) b.appendChild(el("span", "rule-band-label", s.label));
     bands.appendChild(b);
 
-    const lg = el("span");
+    const lg = el("button");
+    lg.type = "button";
     lg.dataset.era = s.key;
     const swatch = el("i");
     swatch.dataset.era = s.key;
     lg.appendChild(swatch);
     lg.appendChild(document.createTextNode(s.label));
+    if (eraCount[s.key]) lg.appendChild(el("span", "lg-n", ` ${eraCount[s.key]}`));
+    lg.addEventListener("click", () => jumpToEra(s));
     legend.appendChild(lg);
   });
 
@@ -177,6 +206,46 @@ function buildMeridian() {
   rule.setAttribute("aria-valuemax", String(state.bounds.max_year));
 }
 
+function jumpToEra(seg) {
+  ensureSynchronic();
+  const y = seg.key === "dawn" ? -3100
+    : Math.round((Math.max(seg.lo, state.bounds.min_year) + seg.hi) / 2);
+  setYear(y);
+}
+
+function buildRegister() {
+  const reg = document.getElementById("register");
+  reg.innerHTML = "";
+  state.regCells = {};
+  state.regions.forEach((region) => {
+    const cell = el("button", "reg-cell");
+    cell.type = "button";
+    cell.dataset.region = region.key;
+    cell.appendChild(el("span", "rc-glyph"));
+    cell.appendChild(el("span", "rc-name", REGION_SHORT[region.key] || region.label));
+    const n = el("span", "rc-n", "0");
+    cell.appendChild(n);
+    cell.addEventListener("click", () => {
+      if (cell.classList.contains("is-empty")) return;
+      const lane = document.getElementById("lane-" + region.key);
+      if (lane) lane.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    reg.appendChild(cell);
+    state.regCells[region.key] = { cell, n };
+  });
+}
+
+function updateRegister(counts) {
+  if (!state.regCells) return;
+  state.regions.forEach((region) => {
+    const c = state.regCells[region.key];
+    const k = counts[region.key] || 0;
+    c.n.textContent = String(k);
+    c.cell.classList.toggle("is-empty", k === 0);
+    c.cell.title = `${region.label}: ${k} reigning in ${fmtYear(state.year)}`;
+  });
+}
+
 let laneRaf = 0;
 function setYear(y) {
   state.year = Math.max(state.bounds.min_year, Math.min(state.bounds.max_year, Math.round(y)));
@@ -184,8 +253,18 @@ function setYear(y) {
   document.getElementById("year-value").textContent = lbl;
   document.getElementById("handle-flag").textContent = lbl;
   document.getElementById("rule-handle").style.left = (yearToPos(state.year) * 100) + "%";
-  document.getElementById("rule").setAttribute("aria-valuenow", String(state.year));
-  document.getElementById("rule").setAttribute("aria-valuetext", lbl);
+  const rule = document.getElementById("rule");
+  rule.setAttribute("aria-valuenow", String(state.year));
+  rule.setAttribute("aria-valuetext", lbl);
+  // bind the year to its age, and light the active era in the legend
+  const seg = eraOfYear(state.year);
+  document.getElementById("year-era").textContent = seg ? "· " + seg.label : "";
+  document.querySelectorAll(".era-legend button").forEach((b) =>
+    b.classList.toggle("is-here", !!seg && b.dataset.era === seg.key));
+  // one pass for both the reading and the register counts
+  const counts = {};
+  state.rulers.forEach((r) => { if (reigning(r, state.year)) counts[r.region] = (counts[r.region] || 0) + 1; });
+  updateRegister(counts);
   renderReading();
   // lanes re-render is cheap, but coalesce rapid drags/sweeps to a frame
   if (laneRaf) cancelAnimationFrame(laneRaf);
@@ -267,6 +346,7 @@ function medallionEl(r, i) {
 function laneEl(region, rulers, emptyText, meta, cap) {
   const lane = el("div", "lane" + (rulers.length ? "" : " is-empty"));
   lane.dataset.region = region.key;
+  lane.id = "lane-" + region.key;
 
   const head = el("div", "lane-head");
   const name = el("div", "lane-name");
@@ -294,6 +374,7 @@ function renderSynchronic() {
   const root = document.getElementById("lanes");
   root.className = "lanes";
   root.innerHTML = "";
+  document.getElementById("register").hidden = false;
   let silent = 0;
   state.regions.forEach((region) => {
     const live = state.rulers
@@ -315,6 +396,7 @@ function renderAtlas() {
   const root = document.getElementById("lanes");
   root.className = "lanes atlas";
   root.innerHTML = "";
+  document.getElementById("register").hidden = true;
   state.regions.forEach((region) => {
     const all = state.rulers
       .filter((r) => r.region === region.key)
@@ -328,6 +410,7 @@ function renderSearch() {
   const root = document.getElementById("lanes");
   root.className = "lanes";
   root.innerHTML = "";
+  document.getElementById("register").hidden = true;
   const hits = state.rulers.filter(matchQuery);
   if (!hits.length) {
     root.appendChild(el("p", "empty-note", `No ruler matches “${state.query}”.`));
@@ -542,6 +625,28 @@ function wireChrome() {
     }, 120);
   });
 
+  // type a year directly (precision across 11,000 years)
+  const yv = document.getElementById("year-value");
+  const yi = document.getElementById("year-input");
+  const openYearInput = () => {
+    ensureSynchronic();
+    yi.value = String(state.year);
+    yv.hidden = true; yi.hidden = false;
+    yi.focus(); yi.select();
+  };
+  const commitYearInput = () => {
+    if (yi.hidden) return;
+    const y = parseYear(yi.value);
+    yi.hidden = true; yv.hidden = false;
+    if (y != null) setYear(y);
+  };
+  yv.addEventListener("click", openYearInput);
+  yi.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); commitYearInput(); yv.focus(); }
+    else if (e.key === "Escape") { yi.hidden = true; yv.hidden = false; yv.focus(); }
+  });
+  yi.addEventListener("blur", commitYearInput);
+
   // theme
   document.getElementById("theme-toggle").addEventListener("click", () => {
     const cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
@@ -568,25 +673,36 @@ function ensureSynchronic() {
 /* dragging / clicking / keying the meridian rule */
 function wireRule() {
   const rule = document.getElementById("rule");
+  const ghost = document.getElementById("rule-ghost");
+  const ghostLabel = document.getElementById("rule-ghost-label");
   let dragging = false;
 
-  const yearFromX = (clientX) => {
+  const posFromX = (clientX) => {
     const rect = rule.getBoundingClientRect();
-    return posToYear((clientX - rect.left) / rect.width);
+    return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
   };
   const onDown = (e) => {
     dragging = true;
+    ghost.hidden = true;
     stopSweep();
     ensureSynchronic();
     rule.setPointerCapture && e.pointerId != null && rule.setPointerCapture(e.pointerId);
-    setYear(yearFromX(e.clientX));
+    setYear(posToYear(posFromX(e.clientX)));
     e.preventDefault();
   };
-  const onMove = (e) => { if (dragging) setYear(yearFromX(e.clientX)); };
+  const onMove = (e) => {
+    const p = posFromX(e.clientX);
+    if (dragging) { setYear(posToYear(p)); return; }
+    // a faint "sighting" of the year under the cursor, before you commit
+    ghost.hidden = false;
+    ghost.style.left = (p * 100) + "%";
+    ghostLabel.textContent = fmtYear(posToYear(p));
+  };
   const onUp = () => { dragging = false; };
 
   rule.addEventListener("pointerdown", onDown);
   rule.addEventListener("pointermove", onMove);
+  rule.addEventListener("pointerleave", () => { ghost.hidden = true; });
   window.addEventListener("pointerup", onUp);
 
   rule.addEventListener("keydown", (e) => {
