@@ -33,7 +33,7 @@ import traceback
 from pathlib import Path
 
 from . import sources
-from .build_seed import ERAS, REGIONS
+from .build_seed import ERAS, MERIDIAN_FLOOR, REGIONS
 from .sources import seed
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -142,9 +142,11 @@ def main():
         index.append({k: r.get(k) for k in INDEX_FIELDS})
     _write_json(DATA_DIR / "rulers.json", index)
 
-    # bounds for the meridian scale
+    # bounds for the meridian scale. The lower bound is floored to MERIDIAN_FLOOR
+    # (9000 BC) so the timeline reaches back into deep prehistory — the long
+    # "Before the Kings" stretch, empty because kingship is younger than writing.
     years = [y for r in rulers for y in (r.get("display_from"), r.get("display_to")) if y is not None]
-    bounds = {"min_year": min(years), "max_year": max(years)} if years else {}
+    bounds = {"min_year": min(min(years), MERIDIAN_FLOOR), "max_year": max(years)} if years else {}
 
     # region + era tables (ordered, with counts) — the frontend reads lane order
     # and era boundaries from here, so they live in one place (build_seed).

@@ -1,99 +1,113 @@
 {
-  "generated_at": "2026-06-02T11:37:52+00:00",
+  "generated_at": "2026-06-02T12:30:50+00:00",
   "title": "Rulers of the Past",
   "tagline": "Who ruled the world at the same time — antiquity to the eighteenth century",
   "totals": {
-    "rulers": 124,
-    "with_image": 121,
-    "with_extract": 124,
-    "chat_ready": 115,
+    "rulers": 634,
+    "with_image": 612,
+    "with_extract": 634,
+    "chat_ready": 513,
     "regions": 10
   },
   "regions": [
     {
       "key": "rome-byzantium",
       "label": "Rome & Byzantium",
-      "count": 14
+      "count": 55
     },
     {
       "key": "europe-west",
       "label": "Western Europe",
-      "count": 20
+      "count": 120
     },
     {
       "key": "europe-east",
       "label": "Eastern Europe & Russia",
-      "count": 10
+      "count": 70
     },
     {
       "key": "middle-east",
       "label": "Middle East & Persia",
-      "count": 15
+      "count": 85
     },
     {
       "key": "steppe",
       "label": "Steppe & Central Asia",
-      "count": 5
+      "count": 28
     },
     {
       "key": "south-asia",
       "label": "South Asia",
-      "count": 15
+      "count": 62
     },
     {
       "key": "southeast-asia",
       "label": "Southeast Asia",
-      "count": 6
+      "count": 38
     },
     {
       "key": "east-asia",
       "label": "East Asia",
-      "count": 21
+      "count": 92
     },
     {
       "key": "africa",
       "label": "Africa",
-      "count": 11
+      "count": 58
     },
     {
       "key": "americas",
       "label": "The Americas",
-      "count": 7
+      "count": 26
     }
   ],
   "eras": [
     {
+      "key": "dawn",
+      "label": "Before the Kings",
+      "from": null,
+      "to": -3300,
+      "count": 0
+    },
+    {
+      "key": "bronze-age",
+      "label": "Bronze Age",
+      "from": -3300,
+      "to": -1200,
+      "count": 37
+    },
+    {
       "key": "antiquity",
       "label": "Antiquity",
-      "from": null,
+      "from": -1200,
       "to": 300,
-      "count": 21
+      "count": 115
     },
     {
       "key": "late-antiquity",
       "label": "Late Antiquity",
       "from": 300,
       "to": 750,
-      "count": 18
+      "count": 73
     },
     {
       "key": "middle-ages",
       "label": "Middle Ages",
       "from": 750,
       "to": 1450,
-      "count": 42
+      "count": 206
     },
     {
       "key": "early-modern",
       "label": "Early Modern",
       "from": 1450,
       "to": null,
-      "count": 43
+      "count": 203
     }
   ],
   "bounds": {
-    "min_year": -1479,
-    "max_year": 1796
+    "min_year": -9000,
+    "max_year": 1840
   },
   "handoff": {
     "year": 476,
@@ -105,20 +119,26 @@
   "sources": {
     "wikidata": {
       "status": "ok",
-      "matched": 124,
-      "total": 124,
+      "matched": 634,
+      "total": 634,
       "no_match": [],
-      "non_human": [],
-      "referenced_labels": 1663,
-      "elapsed_seconds": 91.5
+      "non_human": [
+        "gilgamesh",
+        "yellow-emperor",
+        "solomon",
+        "nezahualcoyotl",
+        "amina"
+      ],
+      "referenced_labels": 5552,
+      "elapsed_seconds": 331.2
     },
     "wikipedia": {
       "status": "ok",
-      "extracts": 124,
-      "total": 124,
-      "chat_ready": 115,
+      "extracts": 634,
+      "total": 634,
+      "chat_ready": 513,
       "no_match": [],
-      "elapsed_seconds": 10.2
+      "elapsed_seconds": 48.1
     }
   }
 }

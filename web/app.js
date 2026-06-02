@@ -64,17 +64,26 @@ function reigning(r, y) {
 function buildSegments() {
   const { min_year, max_year } = state.bounds;
   const eras = state.manifest.eras || [];
-  const total = eras.reduce((s, e) => s + (e.count || 0), 0) || 1;
+  // Width per era is proportional to its ruler count (dense ages get room), but
+  // floored so every band stays clickable — and the empty deep-time "dawn" band
+  // gets a deliberate share so the meridian visibly reaches back to 9000 BC.
+  const FLOOR = 11;
+  const weights = eras.map((e) => Math.max(e.count || 0, FLOOR));
+  const di = eras.findIndex((e) => e.key === "dawn");
+  if (di >= 0) {
+    const others = weights.reduce((s, w, j) => (j === di ? s : s + w), 0);
+    weights[di] = Math.max(weights[di], others * 0.13);
+  }
+  const total = weights.reduce((a, b) => a + b, 0) || 1;
   let x = 0;
-  state.segments = eras.map((e) => {
+  state.segments = eras.map((e, i) => {
     const lo = e.from == null ? min_year : e.from;
     const hi = e.to == null ? max_year : e.to;
-    const w = (e.count || 0) / total;
-    const seg = { key: e.key, label: e.label, lo, hi, x, w: w || 0.0001, count: e.count || 0 };
-    x += seg.w;
+    const w = weights[i] / total;
+    const seg = { key: e.key, label: e.label, lo, hi, x, w, count: e.count || 0 };
+    x += w;
     return seg;
   });
-  // absorb rounding so the last segment ends exactly at 1
   if (state.segments.length) {
     const last = state.segments[state.segments.length - 1];
     last.w = 1 - last.x;
@@ -155,7 +164,7 @@ function buildMeridian() {
   // ticks at canonical years within the span
   const ticks = document.getElementById("rule-ticks");
   ticks.innerHTML = "";
-  const marks = [-1400, -1000, -500, -200, 1, 300, 500, 800, 1100, 1400, 1700];
+  const marks = [-8000, -6000, -4000, -3000, -2000, -1000, 1, 500, 1000, 1400, 1700];
   marks.filter((m) => m >= state.bounds.min_year && m <= state.bounds.max_year).forEach((m) => {
     const t = el("div", "rule-tick");
     t.style.left = (yearToPos(m) * 100) + "%";
@@ -199,7 +208,13 @@ function renderReading() {
   const live = state.rulers.filter((r) => reigning(r, state.year));
   const regions = new Set(live.map((r) => r.region));
   if (!live.length) {
-    reading.innerHTML = `No throne in this atlas is charted in <b>${fmtYear(state.year)}</b> — sweep the meridian to another year.`;
+    // The deep "Before the Kings" stretch: empty on purpose.
+    if (state.year < -3300) {
+      reading.innerHTML = `This is <b>before the first kings</b> — older than writing, older than the city. ` +
+        `No ruler's name survives from this deep. The earliest the record reaches is ${fmtYear(-3100)}.`;
+    } else {
+      reading.innerHTML = `No throne in this atlas is charted in <b>${fmtYear(state.year)}</b> — sweep the meridian to another year.`;
+    }
     return;
   }
   reading.innerHTML =

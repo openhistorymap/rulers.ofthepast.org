@@ -31,8 +31,10 @@
   --accent-soft: oklch(0.50 0.150 33 / 0.16);
 
   /* era washes (timeline bands) */
-  --era-antiquity: oklch(0.86 0.045 75);
-  --era-late-antiquity: oklch(0.82 0.045 120);
+  --era-dawn: oklch(0.90 0.012 60);
+  --era-bronze-age: oklch(0.84 0.052 55);
+  --era-antiquity: oklch(0.86 0.045 95);
+  --era-late-antiquity: oklch(0.82 0.045 145);
   --era-middle-ages: oklch(0.82 0.040 250);
   --era-early-modern: oklch(0.84 0.050 350);
 
@@ -59,8 +61,10 @@
   --gilt-deep: oklch(0.74 0.105 84);
   --accent: oklch(0.66 0.165 35);
   --accent-soft: oklch(0.66 0.165 35 / 0.22);
-  --era-antiquity: oklch(0.40 0.045 75);
-  --era-late-antiquity: oklch(0.38 0.045 120);
+  --era-dawn: oklch(0.27 0.018 264);
+  --era-bronze-age: oklch(0.40 0.050 55);
+  --era-antiquity: oklch(0.40 0.045 95);
+  --era-late-antiquity: oklch(0.38 0.045 145);
   --era-middle-ages: oklch(0.38 0.045 250);
   --era-early-modern: oklch(0.40 0.050 350);
   --recess: inset 0 1px 2px oklch(0 0 0 / 0.4);
@@ -143,6 +147,8 @@ button { font-family: inherit; }
 .rule-bands { position: absolute; inset: 16px 0 18px; display: flex; border: 1px solid var(--line-2);
   border-radius: var(--radius); overflow: hidden; box-shadow: var(--recess); }
 .rule-band { position: relative; height: 100%; }
+.rule-band[data-era="dawn"] { background: var(--era-dawn); }
+.rule-band[data-era="bronze-age"] { background: var(--era-bronze-age); }
 .rule-band[data-era="antiquity"] { background: var(--era-antiquity); }
 .rule-band[data-era="late-antiquity"] { background: var(--era-late-antiquity); }
 .rule-band[data-era="middle-ages"] { background: var(--era-middle-ages); }
@@ -169,6 +175,8 @@ button { font-family: inherit; }
 .era-legend { display: flex; gap: var(--sp-md); flex-wrap: wrap; font-size: 12px; color: var(--ink-faint); }
 .era-legend span { display: inline-flex; align-items: center; gap: 6px; font-family: var(--caps); letter-spacing: 0.08em; }
 .era-legend i { width: 11px; height: 11px; border: 1px solid var(--line-2); display: inline-block; }
+.era-legend i[data-era="dawn"] { background: var(--era-dawn); }
+.era-legend i[data-era="bronze-age"] { background: var(--era-bronze-age); }
 .era-legend i[data-era="antiquity"] { background: var(--era-antiquity); }
 .era-legend i[data-era="late-antiquity"] { background: var(--era-late-antiquity); }
 .era-legend i[data-era="middle-ages"] { background: var(--era-middle-ages); }
