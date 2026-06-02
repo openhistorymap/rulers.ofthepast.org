@@ -15,10 +15,12 @@ the "before this atlas — Rome" card.
 
 ## Scope (decided up front)
 
-- **The roster is a curated table, maintained in `harvester/build_seed.py`** —
-  not a census. ~125 of the most recognisable monarchs of each region and age,
-  chosen so that for most years several thrones are lit at once. Ten regions
-  (the lanes), four eras (the coloured ages of the meridian).
+- **The roster is a hybrid of ~634 rulers.** A hand-curated core of ~255 of the
+  most recognisable monarchs (`harvester/build_seed.py`), topped up per region
+  from Wikidata (`harvester/augment_seed.py`) to a balanced ~634. Ten regions
+  (the lanes), six eras — including the deliberately-empty **"Before the Kings"**
+  deep-time band: the meridian reaches to 9000 BC, but named rulers begin only
+  with Narmer (~3100 BC), because kingship is younger than writing.
 - **Reign spans, curated in the seed, are authoritative for placement.** The
   whole site turns on "who reigned in year Y", so a stray Wikidata office-date
   must never misplace a known king. The harvester fills reign only where the
@@ -32,8 +34,14 @@ the "before this atlas — Rome" card.
 
 ```
 harvester/        Python pipeline (no map deps). `python -m harvester`.
-  build_seed.py   THE ROSTER. A curated region->[rulers] table -> data/seed.json.
-                  To change who is on the site, edit here and re-run.
+  build_seed.py   THE CURATED CORE. A hand region->[rulers] table; exposes
+                  curated_records()/finalize()/write_seed(). `python -m
+                  harvester.build_seed` writes just the curated ~255.
+  augment_seed.py THE FULL ROSTER (default). Builds the curated core, then tops
+                  each region up from Wikidata (sliced WDQS over monarch-class
+                  P39 holders) to a per-region TARGET -> ~634. `python -m
+                  harvester.augment_seed` (needs network). This is the seed
+                  writer for the live site.
   data/seed.json  the canonical spine the harvester reads (committed)
   wikidata.py     wbgetentities + SPARQL client (+ claim helpers). reign_years()
                   is generalised: widest start/end across positions held.
@@ -110,8 +118,9 @@ mirrors that prompt server-side so browser preview and backend ground identicall
 - **Deploy** — stage `web/` + `data/` + `CNAME` → Pages (`actions/deploy-pages`).
   Does *not* harvest. Pages source = "GitHub Actions".
 
-Typical: *frontend change → push → Deploy*; *roster change → edit build_seed.py →
-build_seed → Harvest → eyeball the manifest → Deploy*.
+Typical: *frontend change → push → Deploy*; *roster change → edit build_seed.py
+and/or augment_seed.py targets → `python -m harvester.augment_seed` → Harvest →
+eyeball the manifest → Deploy*.
 
 ## House rules
 
