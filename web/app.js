@@ -264,7 +264,7 @@ function medallionEl(r, i) {
   return m;
 }
 
-function laneEl(region, rulers, emptyText) {
+function laneEl(region, rulers, emptyText, meta, cap) {
   const lane = el("div", "lane" + (rulers.length ? "" : " is-empty"));
   lane.dataset.region = region.key;
 
@@ -273,13 +273,16 @@ function laneEl(region, rulers, emptyText) {
   name.appendChild(el("span", "lane-glyph"));
   name.appendChild(el("span", undefined, region.label));
   head.appendChild(name);
-  head.appendChild(el("div", "lane-meta",
-    rulers.length ? `${rulers.length} reigning` : `${region.count} in the atlas`));
+  head.appendChild(el("div", "lane-meta", meta != null ? meta
+    : (rulers.length ? `${rulers.length} reigning` : `${region.count} in the atlas`)));
   lane.appendChild(head);
 
   const track = el("div", "lane-track");
   if (rulers.length) {
-    rulers.forEach((r, i) => track.appendChild(medallionEl(r, i)));
+    const shown = cap && rulers.length > cap ? rulers.slice(0, cap) : rulers;
+    shown.forEach((r, i) => track.appendChild(medallionEl(r, i)));
+    if (cap && rulers.length > cap)
+      track.appendChild(el("div", "lane-none", `+${rulers.length - cap} more — search to find them`));
   } else {
     track.appendChild(el("div", "lane-none", emptyText));
   }
@@ -297,7 +300,7 @@ function renderSynchronic() {
       .filter((r) => r.region === region.key && reigning(r, state.year))
       .sort((a, b) => (a.display_from || 0) - (b.display_from || 0));
     // With many lanes, show only the regions with a throne this year.
-    if (live.length) root.appendChild(laneEl(region, live, ""));
+    if (live.length) root.appendChild(laneEl(region, live, "", null, 60));
     else silent++;
   });
   if (silent && root.children.length) {
@@ -316,7 +319,7 @@ function renderAtlas() {
     const all = state.rulers
       .filter((r) => r.region === region.key)
       .sort((a, b) => (a.display_from || 0) - (b.display_from || 0));
-    root.appendChild(laneEl(region, all, "—"));
+    root.appendChild(laneEl(region, all, "—", `${all.length} in the atlas`, 80));
   });
   root.appendChild(handoffEl());
 }
@@ -334,7 +337,7 @@ function renderSearch() {
   state.regions.forEach((region) => {
     const inRegion = hits.filter((r) => r.region === region.key)
       .sort((a, b) => (a.display_from || 0) - (b.display_from || 0));
-    if (inRegion.length) root.appendChild(laneEl(region, inRegion, "—"));
+    if (inRegion.length) root.appendChild(laneEl(region, inRegion, "—", `${inRegion.length} match`, 80));
   });
 }
 

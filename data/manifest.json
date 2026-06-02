@@ -1,79 +1,79 @@
 {
-  "generated_at": "2026-06-02T13:45:10+00:00",
+  "generated_at": "2026-06-02T15:21:54+00:00",
   "title": "Rulers of the Past",
   "tagline": "Who ruled the world at the same time — antiquity to the eighteenth century",
   "totals": {
-    "rulers": 868,
-    "with_image": 853,
-    "with_extract": 868,
-    "chat_ready": 744,
+    "rulers": 5141,
+    "with_image": 4065,
+    "with_extract": 5140,
+    "chat_ready": 2544,
     "regions": 13
   },
   "regions": [
     {
       "key": "rome-byzantium",
       "label": "Rome & Byzantium",
-      "count": 56
+      "count": 340
     },
     {
       "key": "italy",
       "label": "Italy",
-      "count": 56
+      "count": 323
     },
     {
       "key": "germany",
       "label": "Germany & the Holy Roman Empire",
-      "count": 84
+      "count": 209
     },
     {
       "key": "europe-west",
       "label": "Western Europe",
-      "count": 100
+      "count": 877
     },
     {
       "key": "europe-east",
       "label": "Eastern Europe & Russia",
-      "count": 86
+      "count": 371
     },
     {
       "key": "middle-east",
       "label": "Middle East & Persia",
-      "count": 88
+      "count": 441
     },
     {
       "key": "steppe",
       "label": "Steppe & Central Asia",
-      "count": 26
+      "count": 76
     },
     {
       "key": "south-asia",
       "label": "South Asia",
-      "count": 60
+      "count": 236
     },
     {
       "key": "southeast-asia",
       "label": "Southeast Asia",
-      "count": 36
+      "count": 441
     },
     {
       "key": "east-asia",
       "label": "East Asia",
-      "count": 90
+      "count": 537
     },
     {
       "key": "africa",
       "label": "Africa",
-      "count": 56
+      "count": 342
     },
     {
       "key": "north-america",
       "label": "North America",
-      "count": 66
+      "count": 436
     },
     {
       "key": "south-america",
       "label": "South America",
-      "count": 64
+      "count": 512
     }
   ],
   "eras": [
@@ -89,42 +89,42 @@
       "label": "Bronze Age",
       "from": -3300,
       "to": -1200,
-      "count": 30
+      "count": 110
     },
     {
       "key": "antiquity",
       "label": "Antiquity",
       "from": -1200,
       "to": 300,
-      "count": 92
+      "count": 460
     },
     {
       "key": "late-antiquity",
       "label": "Late Antiquity",
       "from": 300,
       "to": 750,
-      "count": 76
+      "count": 499
     },
     {
       "key": "middle-ages",
       "label": "Middle Ages",
       "from": 750,
       "to": 1450,
-      "count": 154
+      "count": 1254
     },
     {
       "key": "early-modern",
       "label": "Early Modern",
       "from": 1450,
       "to": 1800,
-      "count": 162
+      "count": 753
     },
     {
       "key": "modern",
       "label": "Modern",
       "from": 1800,
       "to": null,
-      "count": 354
+      "count": 2065
     }
   ],
   "bounds": {
@@ -141,26 +141,37 @@
   "sources": {
     "wikidata": {
       "status": "ok",
-      "matched": 868,
-      "total": 868,
+      "matched": 5141,
+      "total": 5141,
       "no_match": [],
       "non_human": [
         "gilgamesh",
         "yellow-emperor",
         "solomon",
+        "senfa-ared-iv",
+        "hezba-asgad",
+        "jin-asgad",
+        "saba-asgad",
         "nezahualcoyotl",
-        "amina"
+        "amina",
+        "jose-maria-bustillo-honduran",
+        "mariano-garrigo",
+        "francisco-gomez-y-arguelles",
+        "francisco-de-aguilar-politician",
+        "jose-francisco-montes",
+        "marcelino-mejia",
+        "niels-vermeersch"
       ],
-      "referenced_labels": 7604,
-      "elapsed_seconds": 474.7
+      "referenced_labels": 20360,
+      "elapsed_seconds": 1468.1
     },
     "wikipedia": {
       "status": "ok",
-      "extracts": 868,
-      "total": 868,
-      "chat_ready": 744,
+      "extracts": 5140,
+      "total": 5141,
+      "chat_ready": 2544,
       "no_match": [],
-      "elapsed_seconds": 78.7
+      "elapsed_seconds": 545.7
     }
   }
 }

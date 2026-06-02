@@ -84,7 +84,11 @@ PRESENT = 2026          # ongoing terms (no recorded end) run to here
 EXCLUDE_WORDS = (
     "bishop", "archbishop", "patriarch", "pope", "cardinal", "abbot", "abbess",
     "consort", "titular", "pretender", "antipope", "claimant", "co-prince",
-    "viceroy", "governor", "prime minister", "chancellor",
+    "viceroy", "governor",
+    # sub-national heads of government — keep national PMs/chancellors, drop the
+    # mayors and state premiers a politician held on the way up.
+    "mayor", "burgomaster", "minister-president", "minister president",
+    "podestà", "podesta", "alderman", "prefect",
     "nagid", "exilarch", "rabbi", "high priest", "prophet", "saint",
     "deity", "god ", "goddess", "mytholog",
 )
@@ -273,6 +277,27 @@ SELECT DISTINCT ?person ?title ?start ?end ?img ?pos ?p17 ?p27 ?sl ?dod WHERE {
 """
 
 
+# Heads of government queried by citizenship (P27) — national PM/chancellor
+# offices are attached to historical state entities, not the modern country, so
+# matching the position's country misses them. The ruling-span filter then keeps
+# only the national office (mayors / state premiers are excluded).
+HOG_QUERY = """
+SELECT DISTINCT ?person ?title ?start ?end ?img ?pos ?p17 ?p27 ?sl ?dod WHERE {
+  ?person wdt:P27 wd:%s ; wdt:P31 wd:Q5 ; p:P39 ?st .
+  ?st ps:P39 ?pos ; pq:P580 ?start .
+  ?pos wdt:P279* wd:Q2285706 .
+  FILTER NOT EXISTS { ?pos wdt:P279* wd:Q30185 }
+  OPTIONAL { ?st pq:P582 ?end }
+  ?article schema:about ?person ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?title .
+  OPTIONAL { ?person wdt:P18 ?img }
+  OPTIONAL { ?pos wdt:P17 ?p17 }
+  OPTIONAL { ?person wikibase:sitelinks ?sl }
+  OPTIONAL { ?person wdt:P570 ?dod }
+  FILTER(YEAR(?start) >= 1800)
+}
+"""
+
+
 def _merge(people, rows):
     for r in rows:
         pid = _qid(r["person"]["value"])
@@ -280,15 +305,17 @@ def _merge(people, rows):
         if not p:
             p = people[pid] = {
                 "qid": pid, "title": r["title"]["value"],
-                "starts": [], "ends": [], "img": None, "sl": 0, "dod": None,
-                "pos": set(), "p17": set(), "p27": set(),
+                "spans": [], "img": None, "sl": 0, "dod": None,
+                "p17": set(), "p27": set(),
             }
         sy = _yr(r.get("start", {}).get("value"))
         ey = _yr(r.get("end", {}).get("value"))
+        # one (position, start, end) per row — reign is later computed from the
+        # ruling positions only, so a politician's mayoral side-offices don't
+        # stretch the span.
+        pos_q = _qid(r["pos"]["value"]) if r.get("pos") else None
         if sy is not None:
-            p["starts"].append(sy)
-        if ey is not None:
-            p["ends"].append(ey)
+            p["spans"].append((pos_q, sy, ey))
         if r.get("dod"):
             dy = _yr(r["dod"]["value"])
             if dy is not None:
@@ -300,38 +327,48 @@ def _merge(people, rows):
                 p["sl"] = max(p["sl"], int(r["sl"]["value"]))
             except ValueError:
                 pass
-        for k in ("pos", "p17", "p27"):
+        for k in ("p17", "p27"):
             if r.get(k):
                 p[k].add(_qid(r[k]["value"]))
 
 
+def _safe_rows(query, what):
+    """Run a WDQS query, returning [] (not crashing) if it fails after retries —
+    WDQS gets overloaded, and one flaky slice shouldn't abort the whole roster."""
+    try:
+        return wd.query(query)["results"]["bindings"]
+    except Exception as e:
+        print(f"  !! {what} failed ({e!r}); skipping", flush=True)
+        return []
+
+
 def fetch_candidates():
-    """Run the sliced monarch queries + the American head-of-state (president)
-    query, aggregating one record per person."""
+    """Run the sliced monarch queries + the American/European head-of-state
+    (president) queries, aggregating one record per person. Resilient: a failed
+    WDQS slice is skipped rather than aborting the run."""
     people = {}
     for (a, b) in SLICES:
-        res = wd.query(SLICE_QUERY % (a, b))
-        rows = res["results"]["bindings"]
+        rows = _safe_rows(SLICE_QUERY % (a, b), f"slice [{a}..{b})")
         print(f"  slice [{a}..{b}): {len(rows)} rows", flush=True)
         _merge(people, rows)
         time.sleep(2)
     # American heads of state
     values = " ".join("wd:" + q for q in AMERICAN_COUNTRIES)
-    rows = wd.query(HOS_QUERY % (values, "Q48352"))["results"]["bindings"]
+    rows = _safe_rows(HOS_QUERY % (values, "Q48352"), "presidents (Americas)")
     print(f"  presidents (Americas): {len(rows)} rows", flush=True)
     _merge(people, rows)
     time.sleep(2)
     # European presidents (republics)
     values = " ".join("wd:" + q for q in EUROPEAN_COUNTRIES)
-    rows = wd.query(HOS_QUERY % (values, "Q30461"))["results"]["bindings"]
+    rows = _safe_rows(HOS_QUERY % (values, "Q30461"), "presidents (Europe)")
     print(f"  presidents (Europe): {len(rows)} rows", flush=True)
     _merge(people, rows)
     time.sleep(2)
-    # Italian prime ministers + German/Austrian chancellors (heads of government)
-    values = " ".join("wd:" + q for q in HOG_COUNTRIES)
-    rows = wd.query(HOS_QUERY % (values, "Q2285706"))["results"]["bindings"]
-    print(f"  heads of government (IT/DE/AT): {len(rows)} rows", flush=True)
-    _merge(people, rows)
+    # NOTE: national PMs / chancellors come from the curated EXTRA_CURATED table
+    # in build_seed.py — the WDQS head-of-government queries proved too heavy /
+    # flaky (their offices hang off historical-state entities, and broad
+    # citizenship scans time out). Curated marquee heads of government cover the
+    # ask reliably; re-enable a WDQS pass here if a robust query is found.
     return people
 
 
@@ -351,7 +388,8 @@ def main():
     # resolve labels for every position / country / citizenship qid we saw
     label_qids = set()
     for p in people.values():
-        label_qids |= p["pos"] | p["p17"] | p["p27"]
+        label_qids |= p["p17"] | p["p27"]
+        label_qids |= {pos for (pos, _, _) in p["spans"] if pos}
     print(f"augment: resolving {len(label_qids)} labels", flush=True)
     ents = wd.entities(sorted(label_qids))
     label = {q: wd.label(e) for q, e in ents.items() if "missing" not in e}
@@ -361,20 +399,27 @@ def main():
     for p in people.values():
         if p["qid"] in curated_qids:
             continue
-        if not p["starts"]:
+        # reign from the RULING positions only — so a politician's mayoral /
+        # ministerial side-offices don't stretch the span.
+        ruling = [(pos, s, e) for (pos, s, e) in p["spans"]
+                  if not _is_excluded(label.get(pos, ""))]
+        if p["spans"] and not ruling:
+            continue  # only clergy / consort / mayoral / titular positions
+        use = ruling or p["spans"]
+        starts = [s for (_, s, _) in use if s is not None]
+        if not starts:
             continue
-        rf = min(p["starts"])
-        ends = p["ends"]
-        latest = max(p["starts"])
+        ends = [e for (_, _, e) in use if e is not None]
+        rf = min(starts)
+        latest = max(starts)
         rt = max(ends) if ends else latest
         # ongoing term: no recorded end (or a term began at/after the last recorded
-        # end), and recent -> runs to the present, so sitting presidents / reigning
-        # monarchs span to now, not just their first year.
+        # end), and recent -> runs to the present.
         if latest >= 1980 and (not ends or latest >= max(ends)):
             rt = PRESENT
-        # never reign past death — fixes acting/interim roles with no recorded
-        # end being extended to the present (e.g. Spadolini, d. 1994).
-        dod = p.get("dod")
+        # never reign past death — fixes acting/interim roles with no recorded end
+        # being extended to the present (e.g. Spadolini, d. 1994).
+        dod = p["dod"]
         if dod is not None and rf <= dod < rt:
             rt = dod
         if rt < rf:
@@ -383,40 +428,29 @@ def main():
             continue
         if (rt - rf) > MAX_REIGN:
             continue
-        pos_labels = [label.get(q) for q in p["pos"] if label.get(q)]
-        ruling_pos = [l for l in pos_labels if not _is_excluded(l)]
-        if pos_labels and not ruling_pos:
-            continue  # purely clergy / consort / titular
-        # region: prefer position-country, then citizenship, then position label
+        ruling_labels = [label.get(pos) for (pos, _, _) in use if label.get(pos)]
+        # region: prefer position-country, then citizenship, then a ruling position
         region = None
-        for q in p["p17"]:
+        for q in list(p["p17"]) + list(p["p27"]):
             region = classify(label.get(q))
             if region:
                 break
         if not region:
-            for q in p["p27"]:
-                region = classify(label.get(q))
-                if region:
-                    break
-        if not region:
-            for l in ruling_pos:
+            for l in ruling_labels:
                 region = classify(l)
                 if region:
                     break
         if not region:
             continue
-        # realm: a ruling position label that suits the region, else any, else country
+        # realm: the ruling position with the longest span, preferring one in-region
+        cand = [t for t in use if label.get(t[0])]
         realm = None
-        for l in ruling_pos:
-            if classify(l) == region:
-                realm = l
-                break
-        realm = realm or (ruling_pos[0] if ruling_pos else None)
+        if cand:
+            in_region = [t for t in cand if classify(label.get(t[0])) == region]
+            best = max(in_region or cand, key=lambda t: (t[2] or rt) - (t[1] or rf))
+            realm = label.get(best[0])
         if not realm:
-            for q in p["p17"]:
-                if label.get(q):
-                    realm = label[q]
-                    break
+            realm = next((label[q] for q in p["p17"] if label.get(q)), None)
         realm = realm or bs.REGION_LABEL[region]
         by_region[region].append({
             "title": p["title"], "realm": realm, "rf": rf, "rt": rt,
