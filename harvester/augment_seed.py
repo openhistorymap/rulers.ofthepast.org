@@ -31,12 +31,12 @@ from . import wikipedia as wp
 # Per-region targets for the *total* roster (curated + augmented). The augmenter
 # tops each region up to its target with the best-known Wikidata rulers.
 TARGETS = {
-    "rome-byzantium": 52,
-    "italy": 50,
-    "germany": 68,
-    "europe-west": 80,
-    "europe-east": 64,
-    "middle-east": 80,
+    "rome-byzantium": 56,
+    "italy": 56,
+    "germany": 84,
+    "europe-west": 100,
+    "europe-east": 86,
+    "middle-east": 88,
     "steppe": 26,
     "south-asia": 60,
     "southeast-asia": 36,
@@ -46,12 +46,24 @@ TARGETS = {
     "south-america": 64,
 }
 
-# American republics — the head-of-state (president) query runs over these so the
+# American republics — the head-of-state (Q48352) query runs over these so the
 # Americas reach the present, not just the pre-Columbian past.
 AMERICAN_COUNTRIES = [
     "Q30", "Q96", "Q155", "Q414", "Q739", "Q717", "Q419", "Q298", "Q750",
     "Q736", "Q733", "Q77", "Q241", "Q790", "Q786", "Q774", "Q783", "Q811",
     "Q800", "Q804", "Q792",
+]
+
+# European republics — a president (Q30461) query runs over these (so we get the
+# republics' presidents without re-pulling every European monarch). Each routes
+# to its lane by country label: France/Portugal/Ireland/Finland/Iceland/Spain/
+# Switzerland -> europe-west; Germany/Austria -> germany; Italy -> italy; Greece
+# -> rome-byzantium; Turkey -> middle-east; the rest -> europe-east.
+EUROPEAN_COUNTRIES = [
+    "Q142", "Q183", "Q38", "Q159", "Q36", "Q45", "Q27", "Q40", "Q33", "Q41",
+    "Q43", "Q212", "Q218", "Q219", "Q28", "Q213", "Q33946", "Q36704", "Q403",
+    "Q224", "Q37", "Q211", "Q191", "Q189", "Q29", "Q39", "Q15180", "Q230",
+    "Q399", "Q222",
 ]
 
 # Century-ish slices over the named-ruler range. Kept small where history is
@@ -66,6 +78,7 @@ SLICES = [
 
 MAX_REIGN = 80          # drop mythically long "reigns" (data errors / legends)
 MAX_START = 2030        # the timeline reaches the present
+PRESENT = 2026          # ongoing terms (no recorded end) run to here
 
 # Position / title words that are not the sovereigns this atlas is about.
 EXCLUDE_WORDS = (
@@ -105,7 +118,8 @@ REGION_RULES = [
                      "belgium", "denmark", "danish", "norway", "norwegian", "sweden",
                      "swedish", "iceland", "switzerland", "swiss", "andorra",
                      "monaco", "malta", "burgundy", "lorraine", "brittany",
-                     "normandy", "aquitaine", "frankish", "franks", "visigoth"]),
+                     "normandy", "aquitaine", "frankish", "franks", "visigoth",
+                     "finland", "finnish"]),
     ("europe-east", ["russia", "russian", "muscovy", "muscovite", "kievan", "kyiv",
                      "kiev", "rus'", "rus ", " rus", "novgorod", "vladimir-suzdal",
                      "poland", "polish", "lithuania", "lithuanian", "hungary",
@@ -115,7 +129,8 @@ REGION_RULES = [
                      "ukraine", "ukrainian", "belarus", "georgia", "georgian",
                      "armenia", "armenian", "montenegro", "bosnia", "albania",
                      "kievan rus", "galicia-volhynia", "ruthenia", "pomerania",
-                     "silesia", "slovakia", "slovenia"]),
+                     "silesia", "slovakia", "slovenia", "yugoslavia", "latvia",
+                     "latvian", "estonia", "estonian", "soviet", "czechoslovakia"]),
     ("middle-east", ["persia", "persian", "iran", "iranian", "achaemenid", "sasanian",
                      "sassanid", "parthian", "media", "elam", "seleucid", "ottoman",
                      "turkey", "turkish", "rûm", "rum sultanate", "caliphate",
@@ -233,10 +248,13 @@ def _qid(uri):
     return uri.rsplit("/", 1)[-1] if uri else None
 
 
-PRES_QUERY = """
+# Head-of-state query, parameterised by (country VALUES, position class). Americas
+# use Q48352 (head of state — also catches the Brazilian/Mexican emperors); Europe
+# uses Q30461 (president) so we don't re-pull every European monarch.
+HOS_QUERY = """
 SELECT DISTINCT ?person ?title ?start ?end ?img ?pos ?p17 ?p27 ?sl WHERE {
   VALUES ?p17 { %s }
-  ?pos wdt:P17 ?p17 ; wdt:P279* wd:Q48352 .
+  ?pos wdt:P17 ?p17 ; wdt:P279* wd:%s .
   ?person wdt:P31 wd:Q5 ; p:P39 ?st .
   ?st ps:P39 ?pos ; pq:P580 ?start .
   OPTIONAL { ?st pq:P582 ?end }
@@ -287,11 +305,16 @@ def fetch_candidates():
         print(f"  slice [{a}..{b}): {len(rows)} rows", flush=True)
         _merge(people, rows)
         time.sleep(2)
-    # American presidents / heads of state (republics — no monarch positions)
+    # American heads of state
     values = " ".join("wd:" + q for q in AMERICAN_COUNTRIES)
-    res = wd.query(PRES_QUERY % values)
-    rows = res["results"]["bindings"]
+    rows = wd.query(HOS_QUERY % (values, "Q48352"))["results"]["bindings"]
     print(f"  presidents (Americas): {len(rows)} rows", flush=True)
+    _merge(people, rows)
+    time.sleep(2)
+    # European presidents (republics)
+    values = " ".join("wd:" + q for q in EUROPEAN_COUNTRIES)
+    rows = wd.query(HOS_QUERY % (values, "Q30461"))["results"]["bindings"]
+    print(f"  presidents (Europe): {len(rows)} rows", flush=True)
     _merge(people, rows)
     return people
 
@@ -325,7 +348,14 @@ def main():
         if not p["starts"]:
             continue
         rf = min(p["starts"])
-        rt = max(p["ends"]) if p["ends"] else max(p["starts"])
+        ends = p["ends"]
+        latest = max(p["starts"])
+        rt = max(ends) if ends else latest
+        # ongoing term: no recorded end (or a term began at/after the last recorded
+        # end), and recent -> runs to the present, so sitting presidents / reigning
+        # monarchs span to now, not just their first year.
+        if latest >= 1980 and (not ends or latest >= max(ends)):
+            rt = PRESENT
         if rt < rf:
             rf, rt = rt, rf
         if rf < bs.MERIDIAN_FLOOR or rf > MAX_START:

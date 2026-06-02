@@ -1,44 +1,44 @@
 {
-  "generated_at": "2026-06-02T13:05:40+00:00",
+  "generated_at": "2026-06-02T13:45:10+00:00",
   "title": "Rulers of the Past",
   "tagline": "Who ruled the world at the same time — antiquity to the eighteenth century",
   "totals": {
-    "rulers": 789,
-    "with_image": 771,
-    "with_extract": 789,
-    "chat_ready": 670,
+    "rulers": 868,
+    "with_image": 853,
+    "with_extract": 868,
+    "chat_ready": 744,
     "regions": 13
   },
   "regions": [
     {
       "key": "rome-byzantium",
       "label": "Rome & Byzantium",
-      "count": 52
+      "count": 56
     },
     {
       "key": "italy",
       "label": "Italy",
-      "count": 47
+      "count": 56
     },
     {
       "key": "germany",
       "label": "Germany & the Holy Roman Empire",
-      "count": 68
+      "count": 84
     },
     {
       "key": "europe-west",
       "label": "Western Europe",
-      "count": 80
+      "count": 100
     },
     {
       "key": "europe-east",
       "label": "Eastern Europe & Russia",
-      "count": 64
+      "count": 86
     },
     {
       "key": "middle-east",
       "label": "Middle East & Persia",
-      "count": 80
+      "count": 88
     },
     {
       "key": "steppe",
@@ -89,7 +89,7 @@
       "label": "Bronze Age",
       "from": -3300,
       "to": -1200,
-      "count": 29
+      "count": 30
     },
     {
       "key": "antiquity",
@@ -103,28 +103,28 @@
       "label": "Late Antiquity",
       "from": 300,
       "to": 750,
-      "count": 79
+      "count": 76
     },
     {
       "key": "middle-ages",
       "label": "Middle Ages",
       "from": 750,
       "to": 1450,
-      "count": 167
+      "count": 154
     },
     {
       "key": "early-modern",
       "label": "Early Modern",
       "from": 1450,
       "to": 1800,
-      "count": 176
+      "count": 162
     },
     {
       "key": "modern",
       "label": "Modern",
       "from": 1800,
       "to": null,
-      "count": 246
+      "count": 354
     }
   ],
   "bounds": {
@@ -141,8 +141,8 @@
   "sources": {
     "wikidata": {
       "status": "ok",
-      "matched": 789,
-      "total": 789,
+      "matched": 868,
+      "total": 868,
       "no_match": [],
       "non_human": [
         "gilgamesh",
@@ -151,16 +151,16 @@
         "nezahualcoyotl",
         "amina"
       ],
-      "referenced_labels": 7152,
-      "elapsed_seconds": 450.2
+      "referenced_labels": 7604,
+      "elapsed_seconds": 474.7
     },
     "wikipedia": {
       "status": "ok",
-      "extracts": 789,
-      "total": 789,
-      "chat_ready": 670,
+      "extracts": 868,
+      "total": 868,
+      "chat_ready": 744,
       "no_match": [],
-      "elapsed_seconds": 69.8
+      "elapsed_seconds": 78.7
     }
   }
 }
