@@ -30,8 +30,9 @@
     return fa || fb || "dates uncertain";
   }
 
-  // The grounding prompt. The backend will send this as the system message; the
-  // avatar must stay faithful to it. Mirrors chat/app/persona.py.
+  // The grounding prompt — a client-side preview. The shared avatars API rebuilds
+  // the same prompt server-side from this atlas's published JSON and sends it as
+  // the system message; the avatar must stay faithful to it.
   function buildPersonaPrompt(r) {
     const lines = [];
     const who = r.wp_description ? `, ${r.wp_description.toLowerCase()}` : "";
