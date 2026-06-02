@@ -30,8 +30,12 @@ the "before this atlas — Rome" card.
   must never misplace a known king. The harvester fills reign only where the
   seed left it blank; everything else (portraits, biographies, birth/death,
   succession, places, titles) comes from Wikidata + Wikipedia.
-- **Avatar chat: explorer first, model later.** The grounded persona prompt and
-  the chat shell are real now; the LLM call is one spot left for later (`chat/`).
+- **Avatar chat is served by the shared API.** `web/chat.js` POSTs to
+  `chat.people.ofthepast.org` (repo `openfantasymap/avatars`), the one chat
+  service behind all the ruler galleries — it fetches this atlas's published
+  per-ruler JSON, grounds the persona, and answers via an OpenAI-compatible
+  model. If that backend is unreachable the avatar stays in character with a
+  holding reply. It must never fabricate history.
   It must never fabricate history.
 
 ## Layout
@@ -57,8 +61,7 @@ harvester/        Python pipeline (no map deps). `python -m harvester`.
     wikipedia_enrich.py  lead biography + image + chat-readiness
   harvest.py      orchestrator -> data/ (region + era tables, reverse handoff)
 web/              static frontend (no build step, relative paths only)
-  index.html  style.css  app.js  chat.js
-chat/             FastAPI avatar microservice — STUB (LLM not yet wired)
+  index.html  style.css  app.js  chat.js  (chat.js calls the shared avatars API)
 data/             GENERATED, machine-owned. Committed; published by Deploy.
   rulers.json            compact index for the gallery + meridian
   rulers/<id>.json       full per-ruler detail (bio, relations, links)
@@ -107,10 +110,12 @@ a cosmographic almanac inked on vellum (light) / under the astral night (dark);
 Cormorant + Spectral; gold hairline shared with ROAR; region "inks" and era
 "washes" carry meaning and are never fills. Full design context in `.impeccable.md`.
 
-The avatar (`chat.js`, `window.PastChat`) builds its grounding prompt from the
-harvested facts and greets in-character now; sending a message returns a
-self-aware holding reply until the backend is connected. `chat/app/persona.py`
-mirrors that prompt server-side so browser preview and backend ground identically.
+The avatar (`chat.js`, `window.PastChat`) greets in-character and shows a live
+"how this avatar is grounded" preview built from the harvested facts; sending a
+message POSTs to the shared avatars API (`chat.people.ofthepast.org`), which
+rebuilds the same grounding from this atlas's published JSON and answers. If the
+backend is unreachable the reply is a self-aware holding message — never invented
+history.
 
 ## Deploy
 
@@ -131,8 +136,8 @@ eyeball the manifest → Deploy*.
 - `data/` is machine-owned harvester output — never hand-edit it.
 - The roster lives in `build_seed.py`. That is the one file to edit to add,
   remove, or re-date a ruler; everything downstream is generated.
-- No hard-coded credentials. The chat key is read from env (`ANTHROPIC_API_KEY`),
-  never committed.
+- No hard-coded credentials. This repo holds no chat key — the model key lives
+  only in the shared avatars service (`openfantasymap/avatars`).
 - No tests. Don't claim a change is "tested" because nothing broke at import.
 - Portraits/biographies are hot-linked from Wikimedia/Wikipedia; keep the credit
   line in the detail panel and footer. The footer always reads

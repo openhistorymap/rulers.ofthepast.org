@@ -229,7 +229,7 @@ def _is_excluded(label):
 
 
 SLICE_QUERY = """
-SELECT DISTINCT ?person ?title ?start ?end ?img ?pos ?p17 ?p27 ?sl WHERE {
+SELECT DISTINCT ?person ?title ?start ?end ?img ?pos ?p17 ?p27 ?sl ?dod WHERE {
   ?pos wdt:P279* wd:Q116 .
   ?person wdt:P31 wd:Q5 ; p:P39 ?st .
   ?st ps:P39 ?pos ; pq:P580 ?start .
@@ -239,9 +239,14 @@ SELECT DISTINCT ?person ?title ?start ?end ?img ?pos ?p17 ?p27 ?sl WHERE {
   OPTIONAL { ?pos wdt:P17 ?p17 }
   OPTIONAL { ?person wdt:P27 ?p27 }
   OPTIONAL { ?person wikibase:sitelinks ?sl }
+  OPTIONAL { ?person wdt:P570 ?dod }
   FILTER(YEAR(?start) >= %d && YEAR(?start) < %d)
 }
 """
+
+# Heads of government — Italian prime ministers, German (and Austrian)
+# chancellors. Queried separately because they are not heads of state.
+HOG_COUNTRIES = ["Q38", "Q183", "Q40"]
 
 
 def _qid(uri):
@@ -252,7 +257,7 @@ def _qid(uri):
 # use Q48352 (head of state — also catches the Brazilian/Mexican emperors); Europe
 # uses Q30461 (president) so we don't re-pull every European monarch.
 HOS_QUERY = """
-SELECT DISTINCT ?person ?title ?start ?end ?img ?pos ?p17 ?p27 ?sl WHERE {
+SELECT DISTINCT ?person ?title ?start ?end ?img ?pos ?p17 ?p27 ?sl ?dod WHERE {
   VALUES ?p17 { %s }
   ?pos wdt:P17 ?p17 ; wdt:P279* wd:%s .
   ?person wdt:P31 wd:Q5 ; p:P39 ?st .
@@ -262,6 +267,7 @@ SELECT DISTINCT ?person ?title ?start ?end ?img ?pos ?p17 ?p27 ?sl WHERE {
   OPTIONAL { ?person wdt:P18 ?img }
   OPTIONAL { ?person wdt:P27 ?p27 }
   OPTIONAL { ?person wikibase:sitelinks ?sl }
+  OPTIONAL { ?person wdt:P570 ?dod }
   FILTER(YEAR(?start) >= 1750)
 }
 """
@@ -274,7 +280,7 @@ def _merge(people, rows):
         if not p:
             p = people[pid] = {
                 "qid": pid, "title": r["title"]["value"],
-                "starts": [], "ends": [], "img": None, "sl": 0,
+                "starts": [], "ends": [], "img": None, "sl": 0, "dod": None,
                 "pos": set(), "p17": set(), "p27": set(),
             }
         sy = _yr(r.get("start", {}).get("value"))
@@ -283,6 +289,10 @@ def _merge(people, rows):
             p["starts"].append(sy)
         if ey is not None:
             p["ends"].append(ey)
+        if r.get("dod"):
+            dy = _yr(r["dod"]["value"])
+            if dy is not None:
+                p["dod"] = dy if p["dod"] is None else min(p["dod"], dy)
         if r.get("img"):
             p["img"] = r["img"]["value"]
         if r.get("sl"):
@@ -315,6 +325,12 @@ def fetch_candidates():
     values = " ".join("wd:" + q for q in EUROPEAN_COUNTRIES)
     rows = wd.query(HOS_QUERY % (values, "Q30461"))["results"]["bindings"]
     print(f"  presidents (Europe): {len(rows)} rows", flush=True)
+    _merge(people, rows)
+    time.sleep(2)
+    # Italian prime ministers + German/Austrian chancellors (heads of government)
+    values = " ".join("wd:" + q for q in HOG_COUNTRIES)
+    rows = wd.query(HOS_QUERY % (values, "Q2285706"))["results"]["bindings"]
+    print(f"  heads of government (IT/DE/AT): {len(rows)} rows", flush=True)
     _merge(people, rows)
     return people
 
@@ -356,6 +372,11 @@ def main():
         # monarchs span to now, not just their first year.
         if latest >= 1980 and (not ends or latest >= max(ends)):
             rt = PRESENT
+        # never reign past death — fixes acting/interim roles with no recorded
+        # end being extended to the present (e.g. Spadolini, d. 1994).
+        dod = p.get("dod")
+        if dod is not None and rf <= dod < rt:
+            rt = dod
         if rt < rf:
             rf, rt = rt, rf
         if rf < bs.MERIDIAN_FLOOR or rf > MAX_START:
@@ -402,7 +423,9 @@ def main():
             "img": p["img"], "sl": p["sl"],
         })
 
-    # rank within region (best-known first) and cap to the per-region target
+    # No cap — display every ruler we can cleanly place. (TARGETS is retained only
+    # as documentation of the old per-region balance.) Sort best-known first so the
+    # catalogue still reads sensibly and any future cap is easy to re-impose.
     curated_counts = defaultdict(int)
     for r in curated:
         curated_counts[r["region"]] += 1
@@ -410,13 +433,12 @@ def main():
     augmented = []
     for region, cands in by_region.items():
         cands.sort(key=lambda c: (c["sl"], 1 if c["img"] else 0, c["rt"] - c["rf"]), reverse=True)
-        room = max(0, TARGETS.get(region, 40) - curated_counts[region])
-        for c in cands[:room]:
+        for c in cands:
             augmented.append(bs.make_record(
                 c["title"], c["title"], c["realm"], c["rf"], c["rt"], None,
                 region, source="wikidata"))
         print(f"  {region:16} curated {curated_counts[region]:3} + augmented "
-              f"{min(room, len(cands)):3} (of {len(cands)} found)")
+              f"{len(cands):4}")
 
     out = bs.finalize(curated + augmented)
     bs.write_seed(out)
